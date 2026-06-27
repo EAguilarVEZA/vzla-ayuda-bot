@@ -1,0 +1,154 @@
+# =====================================================================
+# BASE DE CONOCIMIENTO VERIFICADA  /  VETTED KNOWLEDGE BASE
+# ---------------------------------------------------------------------
+# IMPORTANT: This file is the ONLY source the bot quotes from. Keep it
+# accurate. Replace every "VERIFICAR" placeholder with confirmed local
+# data before going live. Do NOT invent shelter addresses or phone
+# numbers — when you don't have verified local data, the bot defers to
+# the authoritative organizations below.
+# =====================================================================
+
+disclaimers:
+  unverified_registry: >-
+    Estos registros son creados por ciudadanos y NO están verificados
+    oficialmente. Pueden tener errores o duplicados. Úsalos como apoyo,
+    no como fuente oficial.
+  not_official: >-
+    Esta es información de ayuda, no un canal oficial de emergencia.
+    Para emergencias de vida o muerte, contacta a los servicios locales.
+
+categories:
+
+  missing_persons:
+    title_es: "Buscar a una persona"
+    intro_es: >-
+      Lamento mucho lo que estás viviendo. Aquí tienes las formas más
+      confiables de buscar o reportar a un ser querido.
+    resources:
+      - name: "Cruz Roja — Restablecimiento del Contacto entre Familiares (ICRC RFL)"
+        desc_es: "Sistema internacional y oficial para reunificar familias en desastres."
+        url: "https://familylinks.icrc.org"
+        authoritative: true
+      - name: "Venezuela Te Busca"
+        desc_es: "Registro ciudadano: reporta o busca personas desaparecidas (nombre, edad, foto)."
+        note_es: "Registro NO oficial — ver advertencia."
+        authoritative: false
+      - name: "Desaparecidos Terremoto Venezuela"
+        desc_es: "Registro ciudadano más grande; los equipos están unificando ambos sitios."
+        url: "https://desaparecidosterremotovenezuela.com"
+        note_es: "Registro NO oficial — ver advertencia."
+        authoritative: false
+      - name: "Cruz Roja Venezolana"
+        desc_es: "Red nacional de hospitales y rescate; apoyo para localizar familiares."
+        authoritative: true
+
+  shelter:
+    title_es: "Dónde quedarse / Refugios"
+    intro_es: "Para encontrar un lugar seguro donde quedarte:"
+    resources:
+      - name: "Caritas Venezuela"
+        desc_es: "Refugio de emergencia, alimentos y agua con la Iglesia local."
+        authoritative: true
+      - name: "Cruz Roja Venezolana"
+        desc_es: "Coordina albergues y evacuación en zonas afectadas."
+        authoritative: true
+      - name: "Protección Civil (Venezuela)"
+        desc_es: "Coordinación oficial de emergencias, evacuación y albergues."
+        authoritative: true
+      - name: "Albergues por zona"
+        desc_es: "Estamos confirmando albergues por zona (La Guaira, Caracas, la costa) con organizaciones aliadas. Si hay cupos publicados, aparecen abajo. Dime tu zona para más detalle."
+        authoritative: false
+
+  food:
+    title_es: "Comida y agua"
+    intro_es: "Puntos de comida y agua:"
+    resources:
+      - name: "World Central Kitchen"
+        desc_es: "Comidas calientes para familias afectadas y rescatistas."
+        authoritative: true
+      - name: "Caritas / Cruz Roja"
+        desc_es: "Distribución de alimentos y agua potable."
+        authoritative: true
+      - name: "Puntos de distribución por zona"
+        desc_es: "Confirmando puntos de comida y agua por zona con aliados. Los disponibles aparecen abajo."
+        authoritative: false
+
+  medical:
+    title_es: "Atención médica y suministros"
+    intro_es: "Para atención médica y suministros de salud:"
+    resources:
+      - name: "Direct Relief"
+        desc_es: "Envía suministros médicos a centros de salud locales aliados."
+        authoritative: true
+      - name: "Cruz Roja Venezolana"
+        desc_es: "Hospitales y clínicas activas; primeros auxilios."
+        authoritative: true
+      - name: "Hospitales y clínicas por zona"
+        desc_es: "Confirmando hospitales y clínicas activas por zona con aliados. Los disponibles aparecen abajo."
+        authoritative: false
+
+  mental_health:
+    title_es: "Apoyo emocional"
+    intro_es: >-
+      Lo que sientes es normal ante algo tan difícil. No estás solo/a.
+      Aquí hay apoyo en español:
+    resources:
+      - name: "Children's Bereavement Center / Lift from Loss"
+        desc_es: "Apoyo gratuito de duelo en español, en línea, para niños y adultos."
+        authoritative: true
+      - name: "Si hay peligro inmediato"
+        desc_es: "Si tú o alguien está en peligro inmediato, contacta ya a los servicios de emergencia locales. Estamos sumando líneas de apoyo emocional verificadas."
+        authoritative: false
+
+  events:
+    title_es: "Eventos locales de ayuda"
+    intro_es: "Colectas, jornadas y noches benéficas cerca de ti:"
+    resources:
+      - name: "Colecta en Alpharetta, GA"
+        desc_es: >-
+          Colette French Pastry & Café (2225 Old Milton Pkwy) y Arepita Café
+          (11105 State Bridge Rd) reciben donaciones de insumos nuevos y sellados.
+          En Colette recibes un café y un pastelito de agradecimiento.
+        authoritative: false
+
+  how_to_help:
+    title_es: "Cómo ayudar (donar seguro)"
+    intro_es: >-
+      El dinero ayuda más rápido que los objetos. Estas organizaciones
+      están verificadas y trabajando en el terreno:
+    resources:
+      - name: "GlobalGiving — Venezuela Earthquake Relief Fund"
+        url: "https://www.globalgiving.org/projects/venezuela-earthquake-relief-fund/"
+        authoritative: true
+      - name: "International Rescue Committee (IRC)"
+        authoritative: true
+      - name: "World Central Kitchen"
+        authoritative: true
+      - name: "Direct Relief (médico)"
+        authoritative: true
+      - name: "Catholic Relief Services / Caritas"
+        authoritative: true
+      - name: "UNICEF / Save the Children (niñez)"
+        authoritative: true
+      - name: "Global Empowerment Mission (GEM) — logística de insumos"
+        authoritative: true
+
+  scams:
+    title_es: "Evita estafas"
+    intro_es: "Cuidado con fraudes que se aprovechan de la tragedia:"
+    tips_es:
+      - "Verifica la organización en Charity Navigator y GuideStar antes de donar."
+      - "Desconfía de recaudaciones nuevas sin historial y de mensajes urgentes."
+      - "Nunca envíes dinero a una persona desconocida ni por transferencia directa."
+      - "Hay campañas falsas y generadas con IA: confirma siempre la fuente."
+
+  supplies:
+    title_es: "Insumos (higiene, primeros auxilios)"
+    intro_es: "Para conseguir o donar insumos:"
+    resources:
+      - name: "Global Empowerment Mission (GEM)"
+        desc_es: "Empaca y envía agua, higiene y necesidades médicas a un centro en Caracas."
+        authoritative: true
+      - name: "Caritas / Cruz Roja"
+        desc_es: "Reparten kits de higiene y primeros auxilios."
+        authoritative: true
