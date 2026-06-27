@@ -1,0 +1,96 @@
+<svg viewBox="0 0 940 860" xmlns="http://www.w3.org/2000/svg" font-family="'DM Sans', system-ui, sans-serif">
+  <title>Con Venezuela — Ayuda Venezuela WhatsApp/SMS bot architecture</title>
+  <desc>Layered architecture: users on WhatsApp and SMS reach a Twilio webhook into a FastAPI app, which routes through a bilingual bot to Claude, a vetted knowledge base, a SQLite hero-network store, and a planned federated registry-search module.</desc>
+  <defs>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#667085"/></marker>
+    <marker id="arrBlue" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1f6feb"/></marker>
+    <style>
+      .lbl{fill:#1a1a1a;font-size:14px;font-weight:600;}
+      .sub{fill:#667085;font-size:11px;}
+      .tier{fill:#667085;font-size:11px;font-weight:700;letter-spacing:.08em;}
+      .box{fill:#fff;stroke:#d0d5dd;stroke-width:1.5;}
+      .edge{stroke:#98a2b3;stroke-width:1.6;fill:none;}
+      .mono{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;fill:#667085;}
+    </style>
+  </defs>
+  <rect x="0" y="0" width="313" height="5" fill="#fcd116"/>
+  <rect x="313" y="0" width="314" height="5" fill="#1f4fb0"/>
+  <rect x="627" y="0" width="313" height="5" fill="#cf142b"/>
+  <text x="40" y="46" class="tier">PEOPLE</text>
+  <rect x="40" y="56" width="180" height="62" rx="10" class="box"/>
+  <text x="58" y="84" class="lbl">US diaspora</text>
+  <text x="58" y="104" class="sub">Atlanta • volunteers</text>
+  <rect x="250" y="56" width="180" height="62" rx="10" class="box"/>
+  <text x="268" y="84" class="lbl">Venezuela</text>
+  <text x="268" y="104" class="sub">people who need help</text>
+  <text x="40" y="166" class="tier">CHANNEL</text>
+  <rect x="40" y="176" width="390" height="64" rx="10" class="box"/>
+  <text x="58" y="204" class="lbl">Twilio — WhatsApp &amp; SMS</text>
+  <text x="58" y="224" class="sub">sandbox now → verified sender later · TwiML replies</text>
+  <text x="40" y="288" class="tier">APP · FASTAPI</text>
+  <rect x="40" y="298" width="390" height="64" rx="10" class="box"/>
+  <text x="58" y="326" class="lbl">main.py — webhook</text>
+  <text x="58" y="346" class="mono">POST /whatsapp · POST /sms → bot.handle()</text>
+  <text x="40" y="410" class="tier">ORCHESTRATION · bot.py</text>
+  <rect x="40" y="420" width="390" height="118" rx="10" class="box"/>
+  <text x="58" y="448" class="lbl">Router + state machine</text>
+  <text x="58" y="470" class="sub">1 · language onboarding (es / en / both)</text>
+  <text x="58" y="490" class="sub">2 · numeric / keyword router → intent</text>
+  <text x="58" y="510" class="sub">3 · hero-network flow · DELETE / BORRAR wipe</text>
+  <text x="500" y="166" class="tier">INTELLIGENCE &amp; DATA</text>
+  <rect x="500" y="176" width="400" height="70" rx="10" class="box"/>
+  <text x="518" y="203" class="lbl">llm.py — Claude</text>
+  <text x="518" y="223" class="sub">classify intent · two-way ES-EN translation</text>
+  <text x="518" y="239" class="mono">claude-haiku-4-5 (cheap) · sonnet optional</text>
+  <rect x="500" y="262" width="400" height="70" rx="10" class="box"/>
+  <text x="518" y="289" class="lbl">knowledge.py → resources.yaml</text>
+  <text x="518" y="309" class="sub">vetted KB only — no invented shelters/numbers</text>
+  <text x="518" y="325" class="mono">fill 6x VERIFICAR with local data</text>
+  <rect x="500" y="348" width="400" height="74" rx="10" class="box"/>
+  <text x="518" y="375" class="lbl">matching.py → SQLite</text>
+  <text x="518" y="395" class="sub">users · sessions · hero-network board (bilingual)</text>
+  <text x="518" y="411" class="sub">remote = cross-border · in-person = same region</text>
+  <rect x="500" y="438" width="194" height="64" rx="10" class="box"/>
+  <text x="518" y="465" class="lbl">i18n.py</text>
+  <text x="518" y="485" class="sub">UI strings es/en/both</text>
+  <rect x="706" y="438" width="194" height="64" rx="10" class="box"/>
+  <text x="724" y="465" class="lbl">safety.py</text>
+  <text x="724" y="485" class="sub">guardrail copy</text>
+  <text x="40" y="592" class="tier" fill="#1f6feb">NEXT BUILD · registry_search.py</text>
+  <rect x="40" y="602" width="860" height="118" rx="10" fill="#fff" stroke="#1f6feb" stroke-width="1.8" stroke-dasharray="6 4"/>
+  <text x="60" y="630" class="lbl" fill="#1f6feb">Federated missing-persons search — live, not scraped</text>
+  <text x="60" y="654" class="sub">Pluggable adapters → query in parallel → query-time dedupe (entity resolution)</text>
+  <rect x="60" y="666" width="180" height="40" rx="8" fill="none" stroke="#1f6feb" stroke-width="1.3"/>
+  <text x="78" y="691" class="sub" fill="#1f6feb">Venezuela Te Busca</text>
+  <rect x="252" y="666" width="200" height="40" rx="8" fill="none" stroke="#1f6feb" stroke-width="1.3"/>
+  <text x="270" y="691" class="sub" fill="#1f6feb">Desaparecidos Terremoto</text>
+  <rect x="464" y="666" width="150" height="40" rx="8" fill="none" stroke="#1f6feb" stroke-width="1.3"/>
+  <text x="482" y="691" class="sub" fill="#1f6feb">ICRC Family Links</text>
+  <rect x="626" y="666" width="254" height="40" rx="8" fill="none" stroke="#1f6feb" stroke-width="1.3"/>
+  <text x="644" y="685" class="sub" fill="#1f6feb">results carry: source +</text>
+  <text x="644" y="700" class="sub" fill="#1f6feb">"unverified" + verify link</text>
+  <text x="40" y="762" class="tier">EXTERNAL</text>
+  <rect x="40" y="772" width="280" height="56" rx="10" class="box"/>
+  <text x="58" y="797" class="lbl">Anthropic API</text>
+  <text x="58" y="815" class="sub">classify / translate calls</text>
+  <rect x="340" y="772" width="560" height="56" rx="10" class="box"/>
+  <text x="358" y="797" class="lbl">Public registries + ICRC (read-only, live)</text>
+  <text x="358" y="815" class="sub">queried at request time — never bulk-copied / rehosted</text>
+  <path d="M130,118 L160,176" class="edge" marker-end="url(#arr)"/>
+  <path d="M340,118 L310,176" class="edge" marker-end="url(#arr)"/>
+  <path d="M235,240 L235,298" class="edge" marker-end="url(#arr)"/>
+  <path d="M235,362 L235,420" class="edge" marker-end="url(#arr)"/>
+  <path d="M430,470 L500,210" class="edge" marker-end="url(#arr)"/>
+  <path d="M430,485 L500,295" class="edge" marker-end="url(#arr)"/>
+  <path d="M430,500 L500,382" class="edge" marker-end="url(#arr)"/>
+  <path d="M430,515 L500,468" class="edge" marker-end="url(#arr)"/>
+  <path d="M150,538 L150,602" stroke="#1f6feb" stroke-width="1.8" fill="none" marker-end="url(#arrBlue)"/>
+  <path d="M520,246 C420,420 250,640 200,772" class="edge" marker-end="url(#arr)"/>
+  <path d="M620,720 L620,772" stroke="#1f6feb" stroke-width="1.8" fill="none" marker-end="url(#arrBlue)"/>
+  <rect x="636" y="40" width="264" height="78" rx="10" fill="#fff" stroke="#e4e7ec" stroke-width="1"/>
+  <text x="652" y="60" class="tier">LEGEND</text>
+  <rect x="652" y="70" width="22" height="13" rx="3" class="box"/>
+  <text x="684" y="81" class="sub">built &amp; smoke-tested</text>
+  <rect x="652" y="92" width="22" height="13" rx="3" fill="none" stroke="#1f6feb" stroke-width="1.6" stroke-dasharray="5 3"/>
+  <text x="684" y="103" class="sub" fill="#1f6feb">next build (this session)</text>
+</svg>
