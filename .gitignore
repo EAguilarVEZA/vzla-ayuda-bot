@@ -1,0 +1,17 @@
+# Secrets — NEVER commit
+.env
+*.key
+
+# Local database + state
+*.db
+aftershock_seen.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# OS / editor
+.DS_Store

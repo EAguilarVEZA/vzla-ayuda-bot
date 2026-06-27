@@ -1,0 +1,40 @@
+# One-click deploy to Render. In Render: New -> Blueprint -> connect this repo.
+# It reads this file, provisions the service + a persistent disk, and asks you to
+# paste the secret keys (the ones marked sync:false). Then point your WhatsApp
+# webhook at  https://<your-service>.onrender.com/whatsapp
+services:
+  - type: web
+    name: ayuda-venezuela-bot
+    runtime: docker
+    plan: starter
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: ANTHROPIC_API_KEY      # paste your key (kept secret)
+        sync: false
+      - key: BOT_MODEL
+        value: claude-haiku-4-5
+      - key: DB_PATH
+        value: /data/ayuda.db
+      - key: PUBLIC_BOT_LINK         # wa.me link you share (set once you have a number)
+        sync: false
+      - key: WHATSAPP_INTERACTIVE    # "1" once on the Business API for the native list
+        value: "0"
+      - key: WHATSAPP_PROVIDER
+        value: cloud
+      - key: WHATSAPP_CLOUD_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_ID
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        sync: false
+      - key: ANALYTICS_SALT          # any random string; rotates the daily user hash
+        sync: false
+    disk:
+      name: data                     # persists the SQLite DB across deploys
+      mountPath: /data
+      sizeGB: 1

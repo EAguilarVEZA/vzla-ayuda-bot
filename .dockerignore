@@ -1,0 +1,12 @@
+tests/
+docs/
+dashboard/
+scripts/
+__pycache__/
+*.pyc
+*.db
+.venv/
+.git/
+.env
+*.md
+poster*.html
