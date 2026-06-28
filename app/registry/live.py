@@ -168,58 +168,65 @@ def live_search(query: str) -> list:
 
 
 # ---- render (Spanish base; the bot translates for en/both) ----
-def _status_es(s):
-    if s in ("found", "located"):
-        return "✅ Reportado/a como LOCALIZADO/A"
-    if s == "missing":
-        return "Reportado/a como desaparecido/a (sigue sin localizar)"
-    return s or "Estado no indicado"
+def _status_es(status, gender=None):
+    if status in ("found", "located"):
+        return "🟢 Reportado/a como LOCALIZADO/A"
+    if status == "missing" or not status:
+        if gender == "female":
+            return "🔴 Desaparecida — sigue sin localizar"
+        if gender == "male":
+            return "🔴 Desaparecido — sigue sin localizar"
+        return "🔴 Sigue sin localizar"
+    return "• " + status
 
 
 def _person_block(i, p: Person):
+    """A clean, scannable record. Photo (if any) is attached as an image, so we
+    only flag it here rather than dumping a long URL."""
     bits = [f"{i}. *{p.name}*"]
     meta = []
     if p.age not in (None, ""):
         meta.append(f"{p.age} años")
     if p.gender:
         meta.append(_GENDER_ES.get(p.gender, p.gender))
-    if p.last_seen:
-        meta.append(p.last_seen)
     if meta:
-        bits.append("   " + " · ".join(meta))
-    bits.append("   Estado: " + _status_es(p.status))
-    if p.description:
-        bits.append("   📝 " + p.description)
+        bits.append("    👤 " + " · ".join(meta))
+    if p.last_seen:
+        bits.append("    📍 " + p.last_seen)
+    if p.description and p.description != p.last_seen:
+        bits.append("    📝 " + p.description)
+    bits.append("    " + _status_es(p.status, p.gender))
     if p.photo:
-        bits.append("   📷 Foto: " + p.photo)
+        bits.append("    📷 Foto 👇")
     return "\n".join(bits)
 
 
 def render_es(name: str, verdicts: list) -> str:
-    lines = [f"🔎 Búsqueda: *{name}*  (⚠️ registros ciudadanos, *sin verificar*)", ""]
-    for v in verdicts:
-        if v.status == "match":
-            lines.append(f"*{v.source}* — ✅ encontramos {v.count} registro(s) con ese nombre:")
-            for i, p in enumerate(v.people, 1):
-                lines.append(_person_block(i, p))
-            if v.count > len(v.people):
-                lines.append(f"   …y {v.count - len(v.people)} más.")
-            lines.append(f"👉 Ver todos en la fuente: {v.url}")
-        elif v.status == "none":
-            lines.append(f"*{v.source}* — ❌ no encontramos a nadie con ese nombre.")
-        elif v.status == "handoff":
-            lines.append(f"*{v.source}* — 🔎 búscalo directamente: {v.url}")
-        else:
-            lines.append(f"*{v.source}* — ⚠️ no se pudo consultar ahora; intenta directamente: {v.url}")
+    """Clean result: header + ONLY the sources where the person was found. If
+    nowhere, a short not-found note. No footer/CTA — the 'found' action lives in
+    its own menu option."""
+    found = [v for v in verdicts if v.status == "match" and v.people]
+    header = [f"🔎 *{name}*", "⚠️ Registros ciudadanos, _sin verificar_", ""]
+
+    if not found:
+        return "\n".join(header + [
+            "No encontramos a esta persona en los registros que consultamos ahora.",
+            "Puedes intentar con otra forma del nombre, o registrarla / buscarla aquí:",
+            "• Venezuela te busca: https://venezuelatebusca.com",
+            "• Desaparecidos Terremoto: https://desaparecidosterremotovenezuela.com",
+            "• Cruz Roja (oficial): https://familylinks.icrc.org",
+        ])
+
+    lines = list(header)
+    for v in found:
+        word = "registro encontrado" if v.count == 1 else "registros encontrados"
+        lines.append(f"✅ *{v.source}* — {v.count} {word}:")
         lines.append("")
-    # If you found them: offer it as its own action. Typing ENCONTRÉ starts a
-    # short guided flow that marks the person located and prepares an update for
-    # every registry — instead of dumping raw links here.
-    lines.append("🟢 *¿La encontraste?* Escribe *ENCONTRÉ* y te guío para marcarla "
-                 "como LOCALIZADA y preparar el aviso a los 3 registros.")
-    lines.append("")
-    lines += ["ℹ️ No somos el sistema oficial — te mostramos lo que reporta cada fuente. "
-              "Confirma siempre en la fuente antes de actuar.",
-              "🏛️ Búsqueda oficial de familiares (Cruz Roja): https://familylinks.icrc.org",
-              "⚠️ Nunca envíes dinero a quien diga tener información a cambio de pago."]
-    return "\n".join(lines)
+        for i, p in enumerate(v.people, 1):
+            lines.append(_person_block(i, p))
+            lines.append("")
+        if v.count > len(v.people):
+            lines.append(f"…y {v.count - len(v.people)} más en la fuente.")
+        lines.append(f"🔗 Ver en la fuente: {v.url}")
+        lines.append("")
+    return "\n".join(lines).rstrip()
