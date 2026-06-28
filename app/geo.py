@@ -106,14 +106,20 @@ def _email(tags):
 
 
 def _label(tags, filters):
-    for tag, val, lbl, icon in filters:
+    """Return (label, icon, rank) — rank is the filter's priority index, so for
+    medical, hospitals (rank 0) sort ahead of pharmacies (rank 3)."""
+    for i, (tag, val, lbl, icon) in enumerate(filters):
         if tags.get(tag) == val:
-            return lbl, icon
-    return "Lugar", "📍"
+            er = " 🚨ER" if tags.get("emergency") == "yes" else ""
+            return lbl + er, icon, i
+    return "Lugar", "📍", len(filters)
 
 
-def nearby_osm(lat, lon, category, radius=6000, n=6):
-    """Real nearby places from OpenStreetMap, nearest first. Best-effort."""
+def nearby_osm(lat, lon, category, radius=8000, n=6):
+    """Real nearby places from OpenStreetMap. Best-effort.
+
+    For medical we sort by facility priority THEN distance, so hospitals/clinics
+    surface ahead of the (much denser) pharmacies in an emergency."""
     filters = _CATS.get(category)
     if not filters:
         return []
@@ -133,15 +139,19 @@ def nearby_osm(lat, lon, category, radius=6000, n=6):
         if key in seen:
             continue
         seen.add(key)
-        lbl, icon = _label(tags, filters)
+        lbl, icon, rank = _label(tags, filters)
         d = haversine_km(lat, lon, plat, plon)
         out.append({
-            "name": name.strip(), "label": lbl, "icon": icon,
+            "name": name.strip(), "label": lbl, "icon": icon, "rank": rank,
             "address": _addr(tags), "phone": _phone(tags), "email": _email(tags),
             "distance_km": d, "distance": _fmt_dist(d),
             "maps": maps_link(plat, plon),
         })
-    out.sort(key=lambda p: p["distance_km"])
+    if category == "medical":
+        # hospitals/clinics first (rank), then by distance; show a few more.
+        out.sort(key=lambda p: (p["rank"], p["distance_km"]))
+    else:
+        out.sort(key=lambda p: p["distance_km"])
     return out[:n]
 
 
@@ -200,7 +210,8 @@ def render_nearby_es(lat, lon, category=None) -> str:
 
     # 2) Live OpenStreetMap places, nearest first.
     for cat in cats:
-        places = nearby_osm(lat, lon, cat, n=6 if category else 4)
+        n = 8 if cat == "medical" and category else (6 if category else 4)
+        places = nearby_osm(lat, lon, cat, n=n)
         if not places:
             continue
         found_any = True
