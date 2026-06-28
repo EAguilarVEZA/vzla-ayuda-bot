@@ -9,7 +9,7 @@
 import json
 import logging
 import re
-from . import llm, knowledge, matching as M, i18n, menu, analytics, config, trust, partners, places
+from . import llm, knowledge, matching as M, i18n, menu, analytics, config, trust, partners, places, geo
 from .menu import MenuReply, MediaReply
 
 # A standalone "lat,lon" message (optionally prefixed "ubicacion") => a location.
@@ -197,13 +197,17 @@ def _handle(user, body, lat=None, lon=None):
         lang = M.get_lang(user) if M.user_exists(user) else "both"
         return i18n.t(lang, "banned")
 
-    # Shared location (WhatsApp pin) or typed coordinates -> nearest help.
+    # Shared location (WhatsApp pin) or typed coordinates -> live nearby help.
+    # If the user just asked about a category (loc:<cat>), target that category;
+    # otherwise show the combined life-critical mix.
     loc = _detect_location(body, lat, lon)
     if loc:
         lang = M.get_lang(user) if M.user_exists(user) else "es"
+        st, _ = M.get_session(user)
+        cat = st.split(":", 1)[1] if st and st.startswith("loc:") else None
         M.clear_session(user)
         analytics.log_event(user, "nearby", lang=lang)
-        es = places.render_nearest_es(loc[0], loc[1])
+        es = geo.render_nearby_es(loc[0], loc[1], category=cat)
         return llm.translate(es, "en") if lang == "en" else es
 
     if low in ("borrar", "delete", "eliminar"):
@@ -255,6 +259,12 @@ def _handle(user, body, lat=None, lon=None):
             state, scratch = "", "{}"
         else:
             return _found_flow(user, text, lang, state, scratch)
+
+    # Was waiting for a shared location but they sent something else -> drop it
+    # and route the message normally.
+    if state and state.startswith("loc:"):
+        M.clear_session(user)
+        state, scratch = "", "{}"
 
     # If mid hero-network flow, keep going — only explicit menu/cancel breaks out.
     # (This must come BEFORE greeting handling so answers like "help" or "yes"
@@ -335,8 +345,11 @@ def _route(user, lang, intent):
 
     if intent in knowledge.INTENT_TO_CATEGORY:
         reply = _kb_reply(knowledge.INTENT_TO_CATEGORY[intent], lang)
-        # For location-based help, invite the user to share their location.
-        if intent in ("shelter", "food", "medical", "supplies"):
+        # For location-based help, arm the location-wait state and invite the
+        # user to share their location -> live nearby places for THIS category.
+        if intent in ("shelter", "food", "medical", "supplies", "mental_health"):
+            cat = "medical" if intent == "supplies" else intent
+            M.set_session(user, "loc:" + cat, "{}")
             reply += "\n\n" + i18n.t(lang, "share_location")
         return reply + "\n\n" + i18n.t(lang, "more_options")
 
