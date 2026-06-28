@@ -1,35 +1,55 @@
 """Real, live missing-persons search across public registries.
 
 We query each PUBLIC registry per name AT REQUEST TIME (a single-name lookup, not a
-bulk copy), and report each source's verdict with an 'unverified' label plus a link
-to see the actual records on the source itself. We never claim to be the system of
-record — we just tell the person what each source says and point them to it.
+bulk copy), and report what each source actually says — full record details and a
+photo when available — with an 'unverified' label and a link back to the source.
+We never claim to be the system of record; we tell the person what each source
+reports and point them to it.
 
 Sources:
-- Venezuela te busca (venezuelatebusca.com): live-queried. It already aggregates
-  several sources, so one query covers a lot. We read its data endpoint and report
-  how many possible matches it has.
+- Venezuela te busca (venezuelatebusca.com): live-queried with real record details.
+  It already aggregates several sources, so one query covers a lot.
 - Desaparecidos Terremoto Venezuela: direct-search handoff (link with the query).
-- ICRC Restoring Family Links: the official channel; guided portal, so we hand off.
+- ICRC Restoring Family Links: official channel; guided portal, so we hand off.
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
 import urllib.parse
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 log = logging.getLogger("registry.live")
 TIMEOUT = 6.0
-_UA = {"User-Agent": "AyudaVenezuelaBot/1.0 (humanitarian relief; contact via WhatsApp)"}
+_UA = {"User-Agent": "AyudaVenezuelaBot/1.0 (humanitarian relief)"}
+_VTB = "https://venezuelatebusca.com"
+
+_GENDER_ES = {"female": "Femenino", "male": "Masculino"}
+# Public person fields we surface. We deliberately DO NOT surface reporter
+# phone/email (PII of the person who filed the report).
+_SAFE_FIELDS = ("firstName", "lastName", "age", "gender", "lastSeen",
+                "description", "status", "photoUrl")
+
+
+@dataclass
+class Person:
+    name: str
+    age: object = None
+    gender: str = None
+    last_seen: str = None
+    status: str = None
+    description: str = None
+    photo: str = None
 
 
 @dataclass
 class Verdict:
     source: str
-    status: str          # 'match' | 'none' | 'handoff' | 'error'
+    status: str            # 'match' | 'none' | 'handoff' | 'error'
     url: str
     count: int = 0
+    people: list = field(default_factory=list)
 
 
 def _get(url: str) -> str:
@@ -39,35 +59,93 @@ def _get(url: str) -> str:
     return r.text
 
 
-# ---- Venezuela te busca (live) ----
-def _vtb_count(data: str) -> int:
-    """Pull totalCount from the registry's data response. Robust to format drift."""
-    m = re.search(r'"totalCount"\s*,\s*(\d+)', data)
+# ---- turbo-stream decoder (Remix single-fetch format) ----
+def _decode(text: str):
+    arr = json.loads(text)
+    memo = {}
+
+    def resolve(idx):
+        if not isinstance(idx, int) or idx < 0:
+            return None
+        if idx in memo:
+            return memo[idx]
+        v = arr[idx]
+        if isinstance(v, dict):
+            out = {}
+            memo[idx] = out
+            for k, vi in v.items():
+                key = arr[int(k.lstrip("_"))]
+                out[key] = resolve(vi)
+            return out
+        if isinstance(v, list):
+            out = []
+            memo[idx] = out
+            out.extend(resolve(i) for i in v)
+            return out
+        memo[idx] = v
+        return v
+
+    return resolve(0)
+
+
+def _vtb_count(text: str) -> int:
+    """Robust fallback: pull totalCount even if full decoding fails."""
+    m = re.search(r'"totalCount"\s*,\s*(\d+)', text)
     return int(m.group(1)) if m else 0
 
 
-def venezuela_te_busca(query: str) -> Verdict:
-    name = query.strip()
-    enc = urllib.parse.quote(name)
-    page = f"https://venezuelatebusca.com/?query={enc}"
+def _persons_and_count(text: str):
+    """Return (people, total). Falls back to a regex count if decoding fails."""
+    count = _vtb_count(text)
+    people = []
     try:
-        data = _get(f"https://venezuelatebusca.com/_root.data?query={enc}")
-        count = _vtb_count(data)
-        return Verdict("Venezuela te busca", "match" if count else "none", page, count)
+        decoded = _decode(text)
+        data = None
+        for v in (decoded or {}).values():
+            if isinstance(v, dict) and isinstance(v.get("data"), dict) \
+                    and "persons" in v["data"]:
+                data = v["data"]
+                break
+        if data:
+            count = data.get("totalCount", count) or count
+            for p in (data.get("persons") or [])[:3]:
+                if not isinstance(p, dict):
+                    continue
+                first = (p.get("firstName") or "").strip()
+                last = (p.get("lastName") or "").strip()
+                photo = p.get("photoUrl")
+                if photo and not photo.startswith("http"):
+                    photo = _VTB + "/" + photo.lstrip("/")
+                people.append(Person(
+                    name=(first + " " + last).strip() or "—",
+                    age=p.get("age"), gender=p.get("gender"),
+                    last_seen=p.get("lastSeen"), status=p.get("status"),
+                    description=p.get("description"), photo=photo))
+    except Exception as e:
+        log.warning("vtb decode failed: %s", e)
+    return people, count
+
+
+def venezuela_te_busca(query: str) -> Verdict:
+    enc = urllib.parse.quote(query.strip())
+    page = f"{_VTB}/?query={enc}"
+    try:
+        people, count = _persons_and_count(_get(f"{_VTB}/_root.data?query={enc}"))
+        return Verdict("Venezuela te busca", "match" if count else "none",
+                       page, count, people)
     except Exception as e:
         log.warning("venezuela_te_busca failed: %s", e)
         return Verdict("Venezuela te busca", "error", page)
 
 
-# ---- Desaparecidos Terremoto Venezuela (direct-search handoff) ----
 def desaparecidos(query: str) -> Verdict:
     url = "https://desaparecidosterremotovenezuela.com/?query=" + urllib.parse.quote(query.strip())
     return Verdict("Desaparecidos Terremoto Venezuela", "handoff", url)
 
 
-# ---- ICRC Restoring Family Links (official; handoff) ----
 def icrc(query: str) -> Verdict:
-    return Verdict("Cruz Roja — ICRC (búsqueda oficial)", "handoff", "https://familylinks.icrc.org")
+    return Verdict("Cruz Roja — ICRC (búsqueda oficial)", "handoff",
+                   "https://familylinks.icrc.org")
 
 
 def live_search(query: str) -> list:
@@ -75,22 +153,51 @@ def live_search(query: str) -> list:
 
 
 # ---- render (Spanish base; the bot translates for en/both) ----
+def _status_es(s):
+    if s in ("found", "located"):
+        return "✅ Reportado/a como LOCALIZADO/A"
+    if s == "missing":
+        return "Reportado/a como desaparecido/a (sigue sin localizar)"
+    return s or "Estado no indicado"
+
+
+def _person_block(i, p: Person):
+    bits = [f"{i}. *{p.name}*"]
+    meta = []
+    if p.age not in (None, ""):
+        meta.append(f"{p.age} años")
+    if p.gender:
+        meta.append(_GENDER_ES.get(p.gender, p.gender))
+    if p.last_seen:
+        meta.append(p.last_seen)
+    if meta:
+        bits.append("   " + " · ".join(meta))
+    bits.append("   Estado: " + _status_es(p.status))
+    if p.description:
+        bits.append("   📝 " + p.description)
+    if p.photo:
+        bits.append("   📷 Foto: " + p.photo)
+    return "\n".join(bits)
+
+
 def render_es(name: str, verdicts: list) -> str:
-    lines = [f"🔎 Búsqueda: *{name}*",
-             "Esto dice cada base de datos (⚠️ registros ciudadanos, *sin verificar*):", ""]
+    lines = [f"🔎 Búsqueda: *{name}*  (⚠️ registros ciudadanos, *sin verificar*)", ""]
     for v in verdicts:
         if v.status == "match":
-            lines.append(f"• *{v.source}* — ✅ {v.count} posible(s) coincidencia(s). "
-                         f"Ver detalles aquí: {v.url}")
+            lines.append(f"*{v.source}* — ✅ encontramos {v.count} registro(s) con ese nombre:")
+            for i, p in enumerate(v.people, 1):
+                lines.append(_person_block(i, p))
+            if v.count > len(v.people):
+                lines.append(f"   …y {v.count - len(v.people)} más.")
+            lines.append(f"👉 Ver todos en la fuente: {v.url}")
         elif v.status == "none":
-            lines.append(f"• *{v.source}* — ❌ sin coincidencias")
+            lines.append(f"*{v.source}* — ❌ no encontramos a nadie con ese nombre.")
         elif v.status == "handoff":
-            lines.append(f"• *{v.source}* — 🔎 búscalo directamente: {v.url}")
+            lines.append(f"*{v.source}* — 🔎 búscalo directamente: {v.url}")
         else:
-            lines.append(f"• *{v.source}* — ⚠️ no se pudo consultar ahora; "
-                         f"intenta directamente: {v.url}")
-    lines += ["",
-              "ℹ️ No somos el sistema oficial — te mostramos lo que reporta cada fuente. "
+            lines.append(f"*{v.source}* — ⚠️ no se pudo consultar ahora; intenta directamente: {v.url}")
+        lines.append("")
+    lines += ["ℹ️ No somos el sistema oficial — te mostramos lo que reporta cada fuente. "
               "Confirma siempre en la fuente antes de actuar.",
               "🏛️ Búsqueda oficial de familiares (Cruz Roja): https://familylinks.icrc.org",
               "⚠️ Nunca envíes dinero a quien diga tener información a cambio de pago."]
