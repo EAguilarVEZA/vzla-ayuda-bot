@@ -197,11 +197,11 @@ def render_es(name: str, verdicts: list) -> str:
         else:
             lines.append(f"*{v.source}* — ⚠️ no se pudo consultar ahora; intenta directamente: {v.url}")
         lines.append("")
-    # If you found them: let people update every registry so the name brings calm.
-    lines.append("🟢 *¿Lo/la encontraste?* Avísale a cada registro para marcarlo/a como "
-                 "LOCALIZADO/A (y agrega los detalles que tengas):")
-    for v in verdicts:
-        lines.append(f"   • {v.source}: {v.url}")
+    # If you found them: offer it as its own action. Typing ENCONTRÉ starts a
+    # short guided flow that marks the person located and prepares an update for
+    # every registry — instead of dumping raw links here.
+    lines.append("🟢 *¿La encontraste?* Escribe *ENCONTRÉ* y te guío para marcarla "
+                 "como LOCALIZADA y preparar el aviso a los 3 registros.")
     lines.append("")
     lines += ["ℹ️ No somos el sistema oficial — te mostramos lo que reporta cada fuente. "
               "Confirma siempre en la fuente antes de actuar.",
