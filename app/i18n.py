@@ -35,6 +35,26 @@ STR = {
         "es": "📍 ¿Quieres lo más cercano a ti? Comparte tu ubicación (toca 📎 → Ubicación) o escribe tus coordenadas (ej: 10.60,-66.93) y te muestro los lugares cerca con la dirección y a qué distancia.",
         "en": "📍 Want the closest to you? Share your location (tap 📎 → Location) or type your coordinates (e.g. 10.60,-66.93) and I'll show nearby places with the address and how far.",
     },
+    "found_pick": {
+        "es": "🟢 ¡Qué buena noticia! ¿A cuál de estas personas encontraste? Responde con el número:\n{list}\n(o escribe el nombre)",
+        "en": "🟢 Wonderful news! Which of these people did you find? Reply with the number:\n{list}\n(or type the name)",
+    },
+    "found_where": {
+        "es": "🟢 ¡Qué alivio! Vamos a marcar a *{name}* como localizada.\n¿*Dónde* la encontraste? (ciudad, refugio, hospital, o cómo está ubicada)",
+        "en": "🟢 What a relief! Let's mark *{name}* as located.\n*Where* did you find them? (city, shelter, hospital, or how they're located)",
+    },
+    "found_condition": {
+        "es": "¿*Cómo está*? Responde un número o escríbelo:\n1 A salvo / bien\n2 Herida o en hospital\n3 Otro (escríbelo)",
+        "en": "*How are they*? Reply with a number or describe it:\n1 Safe / well\n2 Injured or in hospital\n3 Other (type it)",
+    },
+    "found_contact": {
+        "es": "¿Quieres dejar un *contacto o tu nombre* para el registro? (ayuda a confirmar). Escríbelo, o escribe NO para omitir.",
+        "en": "Want to leave a *contact or your name* for the record? (helps confirm). Type it, or type NO to skip.",
+    },
+    "found_condolences": {
+        "es": "Lamento mucho tu pérdida. 🕊️ Gracias por ayudar a cerrar la búsqueda; le dará algo de paz a quienes la buscaban.",
+        "en": "I'm so sorry for your loss. 🕊️ Thank you for helping close the search; it will bring some peace to those who were looking.",
+    },
     "error_generic": {
         "es": "Ups, algo salió mal de nuestro lado. Escribe MENU para empezar de nuevo.",
         "en": "Oops, something went wrong on our side. Type MENU to start again.",

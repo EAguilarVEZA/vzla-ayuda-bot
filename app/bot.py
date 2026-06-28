@@ -33,6 +33,17 @@ log = logging.getLogger("bot")
 POST_LIMIT_PER_DAY = 5   # rate limit: hero-network posts per number per day
 _CONTACT_RE = re.compile(r"[+]?\d[\d\s().-]{6,}\d")
 
+# Right after a search, the result offers a "¿La encontraste?" action. These
+# words (in the search context only) start the guided found-flow.
+_FOUND_TRIGGERS = ("encontr", "found", "localic", "localiz", "ya aparec",
+                   "apareci", "aparecio", "apareció")
+_FOUND_DECEASED = ("fallec", "muri", "muerto", "muerta", "decea", "dead",
+                   "passed away", "falleci")
+
+
+def _is_found_trigger(low):
+    return any(w in low for w in _FOUND_TRIGGERS)
+
 
 def _loads(s):
     """Never let a corrupted session blob crash a reply."""
@@ -230,6 +241,21 @@ def _handle(user, body, lat=None, lon=None):
 
     lang = M.get_lang(user)
 
+    # After a search we keep a 'found:ready' context. The user can start the
+    # "I found them" flow; anything else simply drops the context and routes on.
+    if state and state.startswith("found:"):
+        if low in ("menu", "menú", "cancelar", "cancel", "salir", "exit"):
+            M.clear_session(user)
+            return _menu(lang)
+        step = state.split(":", 1)[1]
+        if step == "ready":
+            if _is_found_trigger(low):
+                return _found_flow(user, text, lang, "found:start", scratch)
+            M.clear_session(user)
+            state, scratch = "", "{}"
+        else:
+            return _found_flow(user, text, lang, state, scratch)
+
     # If mid hero-network flow, keep going — only explicit menu/cancel breaks out.
     # (This must come BEFORE greeting handling so answers like "help" or "yes"
     #  aren't mistaken for the menu keyword.)
@@ -384,7 +410,13 @@ def _search_flow(user, text, lang):
     verdicts = registry_live.live_search(name)
     es = registry_live.render_es(name, verdicts)
     photos = [p.photo for v in verdicts for p in getattr(v, "people", []) if p.photo]
-    M.clear_session(user)
+    # Keep a lightweight context so "ENCONTRÉ" can start the found-flow next.
+    ctx = {
+        "name": name,
+        "people": [p.name for v in verdicts for p in getattr(v, "people", [])][:3],
+        "sources": [{"source": v.source, "url": v.url} for v in verdicts],
+    }
+    M.set_session(user, "found:ready", json.dumps(ctx))
 
     if lang == "es":
         body = es
@@ -394,6 +426,106 @@ def _search_flow(user, text, lang):
     text_out = body + "\n\n" + i18n.t(lang, "more_options")
     # On WhatsApp, attach the found person's photo(s) as inline images.
     return MediaReply(text_out, media=photos) if photos else text_out
+
+
+# ---------- "I found them" flow: mark located + prefilled registry handoff ----
+_COND_LABELS = {"1": "A salvo / bien", "2": "Herida o en hospital"}
+
+
+def _canon_condition(low, text):
+    key = low.strip()
+    if key in _COND_LABELS:
+        return _COND_LABELS[key]
+    return text.strip()
+
+
+def _found_flow(user, text, lang, state, scratch):
+    data = _loads(scratch)
+    low = text.lower()
+    step = state.split(":", 1)[1]
+
+    if step == "start":
+        people = data.get("people") or []
+        if len(people) > 1:
+            opts = "\n".join(f"{i}. {n}" for i, n in enumerate(people, 1))
+            M.set_session(user, "found:pick", json.dumps(data))
+            return i18n.t(lang, "found_pick").replace("{list}", opts)
+        data["subject"] = people[0] if people else data.get("name")
+        M.set_session(user, "found:where", json.dumps(data))
+        return i18n.t(lang, "found_where").replace("{name}", data["subject"] or "")
+
+    if step == "pick":
+        people = data.get("people") or []
+        if low.isdigit() and 1 <= int(low) <= len(people):
+            data["subject"] = people[int(low) - 1]
+        else:
+            data["subject"] = text.strip() or data.get("name")
+        M.set_session(user, "found:where", json.dumps(data))
+        return i18n.t(lang, "found_where").replace("{name}", data["subject"] or "")
+
+    if step == "where":
+        data["where"] = text.strip()
+        M.set_session(user, "found:condition", json.dumps(data))
+        return i18n.t(lang, "found_condition")
+
+    if step == "condition":
+        data["condition"] = _canon_condition(low, text)
+        data["_deceased"] = any(w in low for w in _FOUND_DECEASED)
+        M.set_session(user, "found:contact", json.dumps(data))
+        return i18n.t(lang, "found_contact")
+
+    if step == "contact":
+        data["contact"] = None if low in ("no", "n", "skip", "omitir", "-") else text.strip()
+        M.clear_session(user)
+        M.add_found_report(user, data.get("subject"), data.get("where"),
+                           data.get("condition"), data.get("contact"))
+        analytics.log_event(user, "found_marked", lang=lang)
+        es = _render_found_handoff(data)
+        if lang == "en":
+            return llm.translate(es, "en")
+        if lang == "both":
+            return es + "\n— — —\n" + llm.translate(es, "en")
+        return es
+
+    M.clear_session(user)
+    return _menu(lang)
+
+
+def _render_found_handoff(data):
+    subject = data.get("subject") or data.get("name") or "la persona"
+    where = data.get("where") or "—"
+    cond = data.get("condition") or "—"
+    contact = data.get("contact")
+    sources = data.get("sources") or []
+    # The ready-to-paste update the finder posts into each registry's record.
+    msg = f"{subject} fue LOCALIZADO/A. Lugar: {where}. Estado: {cond}."
+    if contact:
+        msg += f" Contacto: {contact}."
+    msg += " Reportado vía Con Venezuela."
+
+    lines = []
+    if data.get("_deceased"):
+        lines += [i18n.STR["found_condolences"]["es"], ""]
+    lines.append(f"🟢 Listo. Marcamos a *{subject}* como *LOCALIZADO/A* en nuestro sistema.")
+    lines.append("")
+    lines.append("Para actualizar cada registro: abre el enlace, busca su ficha y "
+                 "pega este mensaje 👇")
+    lines.append("")
+    lines.append("📋 *Copia esto:*")
+    lines.append(f"«{msg}»")
+    lines.append("")
+    lines.append("Actualiza en cada registro:")
+    if sources:
+        for i, s in enumerate(sources, 1):
+            lines.append(f"{i}) {s.get('source')}: {s.get('url')}")
+    else:
+        lines.append("1) Venezuela te busca: https://venezuelatebusca.com")
+        lines.append("2) Desaparecidos Terremoto Venezuela: https://desaparecidosterremotovenezuela.com")
+        lines.append("3) Cruz Roja — ICRC: https://familylinks.icrc.org")
+    lines.append("")
+    lines.append("ℹ️ No somos el sistema oficial; cada fuente actualiza su propio "
+                 "registro. Tu aviso ayuda a que otros dejen de buscar. 💚")
+    return "\n".join(lines)
 
 
 # ---------- hero-network state machine ----------

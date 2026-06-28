@@ -99,6 +99,13 @@ def init_db():
         c.execute("""CREATE TABLE IF NOT EXISTS claims(
             id INTEGER PRIMARY KEY AUTOINCREMENT, partner TEXT,
             category TEXT, location TEXT, note TEXT, created_at REAL)""")
+        # Close-the-loop on search: when someone reports they LOCATED a person,
+        # we record it here (so the bot reflects it) and hand off a prefilled
+        # update to each public registry. Names here are provided by the finder.
+        c.execute("""CREATE TABLE IF NOT EXISTS found_reports(
+            id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL,
+            user TEXT, subject TEXT, where_found TEXT,
+            condition TEXT, contact TEXT)""")
         # Migrations for columns added after first release (ignore if present).
         for stmt in (
             "ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 0",
@@ -239,6 +246,15 @@ def suspend_posts_by_contact(contact):
     with _conn() as c:
         cur = c.execute("UPDATE posts SET status='suspended' WHERE contact=?", (contact,))
         return cur.rowcount
+
+
+# ---- close-the-loop: a person was LOCATED ----
+def add_found_report(user, subject, where_found, condition, contact):
+    with _conn() as c:
+        c.execute("""INSERT INTO found_reports
+                     (ts,user,subject,where_found,condition,contact)
+                     VALUES(?,?,?,?,?,?)""",
+                  (time.time(), user, subject, where_found, condition, contact))
 
 
 # ---- trust & safety: reports / blocks / bans / verification ----
