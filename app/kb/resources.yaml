@@ -117,23 +117,44 @@ categories:
   how_to_help:
     title_es: "Cómo ayudar (donar seguro)"
     intro_es: >-
-      El dinero ayuda más rápido que los objetos. Estas organizaciones
-      están verificadas y trabajando en el terreno:
+      El dinero ayuda más rápido que los objetos. Estas organizaciones están
+      verificadas y trabajando en el terreno. Dona directo en su sitio oficial:
     resources:
-      - name: "GlobalGiving — Venezuela Earthquake Relief Fund"
-        url: "https://www.globalgiving.org/projects/venezuela-earthquake-relief-fund/"
-        authoritative: true
-      - name: "International Rescue Committee (IRC)"
+      - name: "Global Empowerment Mission (GEM)"
+        desc_es: "Montó un centro de distribución en Caracas; envía agua, higiene e insumos médicos."
+        url: "https://www.globalempowermentmission.org"
         authoritative: true
       - name: "World Central Kitchen"
+        desc_es: "Comidas calientes para familias y rescatistas en la zona afectada."
+        url: "https://donate.wck.org"
         authoritative: true
-      - name: "Direct Relief (médico)"
+      - name: "Direct Relief"
+        desc_es: "Suministros médicos a hospitales y clínicas locales aliadas."
+        url: "https://www.directrelief.org"
+        authoritative: true
+      - name: "International Rescue Committee (IRC)"
+        desc_es: "Respuesta humanitaria de emergencia y reunificación de familias."
+        url: "https://www.rescue.org"
         authoritative: true
       - name: "Catholic Relief Services / Caritas"
+        desc_es: "Refugio, alimentos y agua a través de la Iglesia local."
+        url: "https://www.crs.org"
         authoritative: true
-      - name: "UNICEF / Save the Children (niñez)"
+      - name: "UNICEF USA (niñez)"
+        desc_es: "Protección, agua y atención para niñas y niños afectados."
+        url: "https://www.unicefusa.org"
         authoritative: true
-      - name: "Global Empowerment Mission (GEM) — logística de insumos"
+      - name: "Save the Children (niñez)"
+        desc_es: "Apoyo de emergencia enfocado en la infancia."
+        url: "https://www.savethechildren.org"
+        authoritative: true
+      - name: "GlobalGiving"
+        desc_es: "Plataforma que canaliza fondos verificados a organizaciones en el terreno."
+        url: "https://www.globalgiving.org"
+        authoritative: true
+      - name: "Condado de Miami-Dade — Ayuda para Venezuela (oficial)"
+        desc_es: "Centro oficial de recolección y recursos para la diáspora en el sur de Florida."
+        url: "https://www.miamidade.gov/global/initiatives/relief/venezuela-relief.page"
         authoritative: true
 
   scams:
