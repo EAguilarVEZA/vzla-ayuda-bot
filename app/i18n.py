@@ -31,6 +31,10 @@ STR = {
                "11 Check if something is a scam\n\n"
                "Type LANGUAGE to change. DELETE removes your data."),
     },
+    "share_location": {
+        "es": "📍 ¿Quieres lo más cercano a ti? Comparte tu ubicación (toca 📎 → Ubicación) o escribe tus coordenadas (ej: 10.60,-66.93) y te muestro los lugares cerca con la dirección y a qué distancia.",
+        "en": "📍 Want the closest to you? Share your location (tap 📎 → Location) or type your coordinates (e.g. 10.60,-66.93) and I'll show nearby places with the address and how far.",
+    },
     "error_generic": {
         "es": "Ups, algo salió mal de nuestro lado. Escribe MENU para empezar de nuevo.",
         "en": "Oops, something went wrong on our side. Type MENU to start again.",
@@ -198,8 +202,18 @@ STR = {
         "en": "— Type MENU for more options.",
     },
     "mark_safe": {
-        "es": "Qué alegría 🙏 Actualiza su estado en el registro donde fue reportada (Venezuela Te Busca o Desaparecidos Terremoto Venezuela), o avisa por la Cruz Roja: https://familylinks.icrc.org",
-        "en": "Wonderful 🙏 Update their status in the registry where they were reported (Venezuela Te Busca or Desaparecidos Terremoto Venezuela), or notify the Red Cross: https://familylinks.icrc.org",
+        "es": ("¡Qué alegría! 🙏 Márcalo/a como *LOCALIZADO/A* en cada registro para que su "
+               "nombre dé tranquilidad. Abre el registro, busca su ficha y actualiza su "
+               "estado (agrega dónde está y los detalles que tengas):\n"
+               "• Venezuela te busca: https://venezuelatebusca.com\n"
+               "• Desaparecidos Terremoto: https://desaparecidosterremotovenezuela.com\n"
+               "• Cruz Roja (ICRC): https://familylinks.icrc.org"),
+        "en": ("Wonderful! 🙏 Mark them as *LOCATED* in each registry so their name brings "
+               "calm. Open the registry, find their record and update the status (add where "
+               "they are and any details):\n"
+               "• Venezuela te busca: https://venezuelatebusca.com\n"
+               "• Desaparecidos Terremoto: https://desaparecidosterremotovenezuela.com\n"
+               "• Red Cross (ICRC): https://familylinks.icrc.org"),
     },
     "authoritative_handoff": {
         "es": "Para la búsqueda oficial de familiares usa la Cruz Roja: https://familylinks.icrc.org",

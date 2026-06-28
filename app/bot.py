@@ -9,8 +9,24 @@
 import json
 import logging
 import re
-from . import llm, knowledge, matching as M, i18n, menu, analytics, config, trust, partners
-from .menu import MenuReply
+from . import llm, knowledge, matching as M, i18n, menu, analytics, config, trust, partners, places
+from .menu import MenuReply, MediaReply
+
+# A standalone "lat,lon" message (optionally prefixed "ubicacion") => a location.
+_COORD_RE = re.compile(r"^(?:ubicaci[oó]n|location|loc)?\s*(-?\d{1,2}\.\d+)\s*[, ]\s*(-?\d{1,3}\.\d+)\s*$",
+                       re.IGNORECASE)
+
+
+def _detect_location(body, lat, lon):
+    if lat is not None and lon is not None:
+        try:
+            return float(lat), float(lon)
+        except (TypeError, ValueError):
+            return None
+    m = _COORD_RE.match((body or "").strip())
+    if m:
+        return float(m.group(1)), float(m.group(2))
+    return None
 
 log = logging.getLogger("bot")
 
@@ -141,12 +157,12 @@ def _notify_match(recipient, data):
     M.add_notification(recipient, text)
 
 
-def handle(user, body):
+def handle(user, body, lat=None, lon=None):
     """Public entry. Crash-proof: any unexpected error returns a friendly
     fallback instead of dropping the user's message. Also delivers queued
     notifications (e.g. new matches) when the user isn't mid-flow."""
     try:
-        reply = _handle(user, body)
+        reply = _handle(user, body, lat, lon)
     except Exception:
         log.exception("bot error for user=%s", user)
         return i18n.t(_safe_lang(user), "error_generic")
@@ -161,7 +177,7 @@ def handle(user, body):
     return reply
 
 
-def _handle(user, body):
+def _handle(user, body, lat=None, lon=None):
     text = (body or "").strip()
     low = text.lower()
 
@@ -169,6 +185,15 @@ def _handle(user, body):
     if M.is_banned(user):
         lang = M.get_lang(user) if M.user_exists(user) else "both"
         return i18n.t(lang, "banned")
+
+    # Shared location (WhatsApp pin) or typed coordinates -> nearest help.
+    loc = _detect_location(body, lat, lon)
+    if loc:
+        lang = M.get_lang(user) if M.user_exists(user) else "es"
+        M.clear_session(user)
+        analytics.log_event(user, "nearby", lang=lang)
+        es = places.render_nearest_es(loc[0], loc[1])
+        return llm.translate(es, "en") if lang == "en" else es
 
     if low in ("borrar", "delete", "eliminar"):
         M.wipe_user(user)
@@ -284,6 +309,9 @@ def _route(user, lang, intent):
 
     if intent in knowledge.INTENT_TO_CATEGORY:
         reply = _kb_reply(knowledge.INTENT_TO_CATEGORY[intent], lang)
+        # For location-based help, invite the user to share their location.
+        if intent in ("shelter", "food", "medical", "supplies"):
+            reply += "\n\n" + i18n.t(lang, "share_location")
         return reply + "\n\n" + i18n.t(lang, "more_options")
 
     if intent == "mark_safe":
@@ -355,6 +383,7 @@ def _search_flow(user, text, lang):
     # Live, stateless query across the public registries; nothing is persisted.
     verdicts = registry_live.live_search(name)
     es = registry_live.render_es(name, verdicts)
+    photos = [p.photo for v in verdicts for p in getattr(v, "people", []) if p.photo]
     M.clear_session(user)
 
     if lang == "es":
@@ -362,7 +391,9 @@ def _search_flow(user, text, lang):
     else:
         en = llm.translate(es, "en")
         body = en if lang == "en" else es + "\n— — —\n" + en
-    return body + "\n\n" + i18n.t(lang, "more_options")
+    text_out = body + "\n\n" + i18n.t(lang, "more_options")
+    # On WhatsApp, attach the found person's photo(s) as inline images.
+    return MediaReply(text_out, media=photos) if photos else text_out
 
 
 # ---------- hero-network state machine ----------

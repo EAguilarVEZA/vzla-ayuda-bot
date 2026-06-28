@@ -113,6 +113,16 @@ class MenuReply(str):
         return obj
 
 
+class MediaReply(str):
+    """A text reply that also carries image URLs. On WhatsApp the webhook attaches
+    them so e.g. a missing person's photo shows inline; on SMS/the simulator the
+    text (which still includes the photo links) is shown as-is."""
+    def __new__(cls, text, media=None):
+        obj = super().__new__(cls, text)
+        obj.media = list(media or [])[:5]   # WhatsApp caps media per message
+        return obj
+
+
 def _menu_text_one(lang):
     lines = [_HEADERS["intro"][lang], ""]
     for sec in SECTIONS:

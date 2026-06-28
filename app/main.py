@@ -19,7 +19,7 @@ log = logging.getLogger("main")
 
 from .bot import handle
 from .matching import init_db
-from .menu import MenuReply
+from .menu import MenuReply, MediaReply
 from .send import send_interactive_list
 from . import analytics, partners
 from .sim import SIM_HTML
@@ -96,11 +96,11 @@ def api_claims_add(body: ClaimIn, partner=Depends(require_partner)):
     return {"ok": True, "id": cid}
 
 
-def _build_response(user: str, body: str) -> Response:
+def _build_response(user: str, body: str, lat=None, lon=None) -> Response:
     # handle() is crash-proof, but guard the whole webhook so Twilio always gets
     # a valid 200 TwiML (a 500 triggers retries and a bad user experience).
     try:
-        reply = handle(user=user, body=body)
+        reply = handle(user=user, body=body, lat=lat, lon=lon)
         if isinstance(reply, MenuReply) and send_interactive_list(user, reply):
             return Response(content=str(MessagingResponse()),
                             media_type="application/xml")
@@ -109,7 +109,10 @@ def _build_response(user: str, body: str) -> Response:
         reply = "⚠️ Please try again in a moment."
 
     twiml = MessagingResponse()
-    twiml.message(str(reply))
+    m = twiml.message(str(reply))
+    if isinstance(reply, MediaReply):
+        for url in reply.media:        # attach images (e.g. a missing person's photo)
+            m.media(url)
     return Response(content=str(twiml), media_type="application/xml")
 
 
@@ -147,9 +150,10 @@ def metrics_daily(days: int = 14):
 
 
 @app.post("/whatsapp")
-async def whatsapp(From: str = Form(...), Body: str = Form("")):
-    """Twilio posts form fields 'From' and 'Body'."""
-    return _build_response(user=From, body=Body)
+async def whatsapp(From: str = Form(...), Body: str = Form(""),
+                   Latitude: str = Form(None), Longitude: str = Form(None)):
+    """Twilio posts 'From' and 'Body'; a shared location adds Latitude/Longitude."""
+    return _build_response(user=From, body=Body, lat=Latitude, lon=Longitude)
 
 
 # Same handler also works for plain SMS if you point an SMS number here.
