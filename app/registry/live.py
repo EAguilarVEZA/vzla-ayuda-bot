@@ -88,6 +88,21 @@ def _decode(text: str):
     return resolve(0)
 
 
+def _clean_name(first: str, last: str) -> str:
+    """Registry records sometimes repeat the name across firstName/lastName
+    (e.g. first='Jose Bolivar', last='Jose' -> 'Jose Bolivar Jose'). De-dup the
+    tokens, preserving order, so the displayed name reads cleanly."""
+    raw = ((first or "").strip() + " " + (last or "").strip()).strip()
+    seen, out = set(), []
+    for tok in raw.split():
+        k = tok.lower()
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(tok)
+    return " ".join(out) or "—"
+
+
 def _vtb_count(text: str) -> int:
     """Robust fallback: pull totalCount even if full decoding fails."""
     m = re.search(r'"totalCount"\s*,\s*(\d+)', text)
@@ -117,7 +132,7 @@ def _persons_and_count(text: str):
                 if photo and not photo.startswith("http"):
                     photo = _VTB + "/" + photo.lstrip("/")
                 people.append(Person(
-                    name=(first + " " + last).strip() or "—",
+                    name=_clean_name(first, last),
                     age=p.get("age"), gender=p.get("gender"),
                     last_seen=p.get("lastSeen"), status=p.get("status"),
                     description=p.get("description"), photo=photo))
