@@ -90,9 +90,12 @@ categories:
   mental_health:
     title_es: "Apoyo emocional"
     intro_es: >-
-      Lo que sientes es normal ante algo tan difícil. No estás solo/a.
-      Aquí hay apoyo en español:
+      Lo que sientes es normal ante algo tan difícil. No estás solo/a, y pedir
+      apoyo es de valientes. Aquí tienes apoyo y algo que puedes hacer ahora:
     resources:
+      - name: "Respira un momento"
+        desc_es: "Inhala 4 segundos, sostén 4, exhala 6. Repite unas veces. Nombra 5 cosas que veas a tu alrededor. Ayuda a calmar el cuerpo."
+        authoritative: false
       - name: "Children's Bereavement Center / Lift from Loss"
         desc_es: "Apoyo gratuito de duelo en español, en línea, para niños y adultos."
         authoritative: true
