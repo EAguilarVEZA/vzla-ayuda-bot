@@ -76,8 +76,9 @@ def _menu(lang, body=None):
 
 NUM_TO_INTENT = {
     "1": "missing_persons", "2": "mark_safe", "3": "shelter", "4": "food",
-    "5": "medical", "6": "mental_health", "7": "events", "8": "hero",
-    "9": "browse", "10": "how_to_help", "11": "scams",
+    "5": "medical", "6": "mental_health", "7": "events",
+    "8": "hero_need", "9": "hero_offer", "10": "browse",
+    "11": "how_to_help", "12": "scams",
 }
 
 # Deterministic keyword router — runs BEFORE the LLM so the common asks cost
@@ -93,7 +94,8 @@ KEYWORD_INTENTS = [
     (("evento", "jornada", "event"), "events"),
     (("voluntari", "quiero ayudar", "want to help", "ofrezco", "i can help"), "hero_offer"),
     (("necesito ayuda", "need help", "ayúdenme", "ayudenme"), "hero_need"),
-    (("ver solicitud", "browse", "quien necesita", "who needs"), "browse"),
+    (("ver solicitud", "browse", "quien necesita", "who needs", "tablero",
+      "board", "ver el tablero"), "browse"),
     (("donar", "donate", "donación", "donacion", "como ayudo", "how to help"), "how_to_help"),
     (("estafa", "fraude", "scam", "fraud"), "scams"),
 ]
@@ -300,6 +302,13 @@ def _handle(user, body, lat=None, lon=None):
         M.add_block(user, text.strip())
         return i18n.t(lang, "block_done")
 
+    # Rating a hero (1-5 stars) — guided flow.
+    if state and state.startswith("rate:"):
+        if low in ("menu", "menú", "cancelar", "cancel", "salir", "exit"):
+            M.clear_session(user)
+            return _menu(lang)
+        return _rate_flow(user, text, lang, state, scratch)
+
     if low in ("resuelto", "resolved", "resuelta", "listo"):
         M.resolve_user_posts(user)
         return i18n.t(lang, "resolved_done")
@@ -314,6 +323,11 @@ def _handle(user, body, lat=None, lon=None):
     if low in ("bloquear", "block"):
         M.set_session(user, "block:await", "{}")
         return i18n.t(lang, "block_ask")
+
+    if low in ("calificar", "rate", "valorar", "calificar a un heroe",
+               "calificar a un héroe"):
+        M.set_session(user, "rate:contact", "{}")
+        return i18n.t(lang, "rate_ask_contact")
 
     if low in ("compartir", "share", "invitar", "invite"):
         return _share(lang)
@@ -379,22 +393,85 @@ def _badge(m, lang):
     return "  " + i18n.t(lang, "verified_badge") if m.get("_verified") else ""
 
 
+def _stars(contact, lang):
+    """A helper's reputation badge: ⭐ avg (N reviews), or 'new' if unrated."""
+    avg, n = M.hero_stats(contact)
+    if not n:
+        return "  ⭐ " + ("sin reseñas aún" if lang != "en" else "no reviews yet")
+    word = ("reseña" if n == 1 else "reseñas") if lang != "en" else \
+           ("review" if n == 1 else "reviews")
+    return f"  ⭐ {avg}/5 ({n} {word})"
+
+
 def _browse(user, lang):
-    offers = M.list_open("offer", 3, viewer=user)
-    needs = M.list_open("need", 3, viewer=user)
+    """The board: two clear sections (offers / needs), each helper's star
+    reputation, and a top-rated leaderboard."""
+    offers = M.list_open("offer", 6, viewer=user)
+    needs = M.list_open("need", 6, viewer=user)
     if not offers and not needs:
         return i18n.t(lang, "browse_empty")
-    lines = [i18n.t(lang, "browse_header")]
+    es = lang != "en"
+    lines = [i18n.t(lang, "board_header")]
+
+    top = M.top_heroes(3)
+    if top:
+        lines.append("\n🏆 " + ("Héroes mejor valorados:" if es else "Top-rated heroes:"))
+        for contact, avg, n in top:
+            lines.append(f"   ⭐ {avg}/5 ({n}) — {contact}")
+
+    lines.append("\n🦸 " + ("*OFRECEN AYUDA*" if es else "*OFFERING HELP*"))
     if offers:
-        lines.append("\n🦸 " + ("Ofrecen ayuda / Offering help:" if lang != "en" else "Offering help:"))
         for m in offers:
-            lines.append(f"• [{m['category']}/{m.get('mode','')}] {_pick_desc(m, lang)} — {m['contact']}{_badge(m, lang)}")
+            lines.append(f"• [{m['category']}/{m.get('mode','')}] {_pick_desc(m, lang)} "
+                         f"— {m['contact']}{_badge(m, lang)}{_stars(m['contact'], lang)}")
+    else:
+        lines.append("   " + ("(nadie aún — sé el primero: escribe 9)" if es
+                              else "(no one yet — be first: type 9)"))
+
+    lines.append("\n🙏 " + ("*NECESITAN AYUDA*" if es else "*NEED HELP*"))
     if needs:
-        lines.append("\n🙏 " + ("Necesitan ayuda / Need help:" if lang != "en" else "Need help:"))
         for m in needs:
-            lines.append(f"• [{m['category']}/{m.get('mode','')}] {_pick_desc(m, lang)} — {m['contact']}{_badge(m, lang)}")
+            lines.append(f"• [{m['category']}/{m.get('mode','')}] {_pick_desc(m, lang)} "
+                         f"— {m['contact']}{_badge(m, lang)}")
+    else:
+        lines.append("   " + ("(ninguna por ahora)" if es else "(none right now)"))
+
     lines.append("\n" + i18n.t(lang, "safety_card"))
+    lines.append(i18n.t(lang, "rate_hint"))
     return "\n".join(lines)
+
+
+def _rate_flow(user, text, lang, state, scratch):
+    data = _loads(scratch)
+    low = text.strip().lower()
+    step = state.split(":", 1)[1]
+
+    if step == "contact":
+        contact = text.strip()
+        if M.is_self_contact(user, contact):
+            M.clear_session(user)
+            return i18n.t(lang, "rate_self")
+        data["contact"] = contact
+        M.set_session(user, "rate:stars", json.dumps(data))
+        return i18n.t(lang, "rate_ask_stars")
+
+    if step == "stars":
+        if not low.isdigit() or not (1 <= int(low) <= 5):
+            return i18n.t(lang, "rate_invalid_stars")
+        data["stars"] = int(low)
+        M.set_session(user, "rate:comment", json.dumps(data))
+        return i18n.t(lang, "rate_ask_comment")
+
+    if step == "comment":
+        comment = None if low in ("no", "n", "skip", "omitir", "-") else text.strip()
+        M.add_rating(user, data["contact"], data["stars"], comment)
+        M.clear_session(user)
+        avg, n = M.hero_stats(data["contact"])
+        return (i18n.t(lang, "rate_done").replace("{stars}", "⭐" * data["stars"])
+                .replace("{avg}", str(avg)).replace("{n}", str(n)))
+
+    M.clear_session(user)
+    return _menu(lang)
 
 
 # ---------- missing-persons federated search ----------
@@ -647,9 +724,11 @@ def _hero_flow(user, text, lang, state, scratch):
             return (i18n.t(lang, "saved_no_match") + "\n" + i18n.t(lang, "resolve_hint")
                     + "\n" + i18n.t(lang, "privacy"))
         lines = [i18n.t(lang, "matches_header")]
+        show_stars = data.get("kind") == "need"   # matches are helpers -> show rep
         for m in matches:
             loc = m.get("location") or m.get("region") or ""
-            lines.append(f"• {_pick_desc(m, lang)} — {loc} — {m['contact']}{_badge(m, lang)}")
+            star = _stars(m["contact"], lang) if show_stars else ""
+            lines.append(f"• {_pick_desc(m, lang)} — {loc} — {m['contact']}{_badge(m, lang)}{star}")
             if m.get("_cross_border"):
                 lines.append("  " + i18n.t(lang, "cross_border_tag"))
             # Notify-on-match: tell the OTHER side a new match appeared, in their
@@ -657,6 +736,8 @@ def _hero_flow(user, text, lang, state, scratch):
             _notify_match(m["user"], data)
         lines.append("\n" + i18n.t(lang, "safety_card"))
         lines.append(i18n.t(lang, "resolve_hint"))
+        if show_stars:
+            lines.append(i18n.t(lang, "rate_hint"))
         return "\n".join(lines)
 
     M.clear_session(user)

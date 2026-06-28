@@ -213,6 +213,38 @@ STR = {
         "es": "Solicitudes abiertas en la red:",
         "en": "Open requests in the network:",
     },
+    "board_header": {
+        "es": "📋 *Tablero de la Red de Héroes*",
+        "en": "📋 *Hero Network Board*",
+    },
+    "rate_hint": {
+        "es": "⭐ ¿Alguien te ayudó? Escribe CALIFICAR para valorarlo/a (1-5) y ayudar a otros a confiar.",
+        "en": "⭐ Did someone help you? Type RATE to score them (1-5) and help others trust.",
+    },
+    "rate_ask_contact": {
+        "es": "⭐ Vamos a calificar a un héroe. Escribe su *número de contacto* (el que aparece en el tablero).",
+        "en": "⭐ Let's rate a hero. Type their *contact number* (the one shown on the board).",
+    },
+    "rate_ask_stars": {
+        "es": "¿Cuántas *estrellas* le das? Responde 1, 2, 3, 4 o 5.",
+        "en": "How many *stars*? Reply 1, 2, 3, 4 or 5.",
+    },
+    "rate_invalid_stars": {
+        "es": "Por favor responde un número del 1 al 5.",
+        "en": "Please reply with a number from 1 to 5.",
+    },
+    "rate_ask_comment": {
+        "es": "¿Un comentario corto sobre tu experiencia? Escríbelo, o escribe NO para omitir.",
+        "en": "A short comment about your experience? Type it, or type NO to skip.",
+    },
+    "rate_done": {
+        "es": "¡Gracias! 🙏 Registramos tu calificación {stars}. Ahora tiene {avg}/5 con {n} reseña(s). Esto ayuda a que la red sea más confiable.",
+        "en": "Thank you! 🙏 Your rating {stars} is in. They're now at {avg}/5 with {n} review(s). This makes the network more trustworthy.",
+    },
+    "rate_self": {
+        "es": "No puedes calificarte a ti mismo/a. 😊 Escribe MENU para volver.",
+        "en": "You can't rate yourself. 😊 Type MENU to go back.",
+    },
     "privacy": {
         "es": "Guardamos lo mínimo necesario. Escribe BORRAR para eliminar tus datos.",
         "en": "We store the minimum needed. Type DELETE to remove your data.",

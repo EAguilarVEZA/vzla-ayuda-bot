@@ -106,6 +106,13 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL,
             user TEXT, subject TEXT, where_found TEXT,
             condition TEXT, contact TEXT)""")
+        # Hero reputation: 1-5 star ratings keyed by the helper's contact, so
+        # people who help build a visible track record. One rating per rater per
+        # hero (the latest replaces the previous).
+        c.execute("""CREATE TABLE IF NOT EXISTS ratings(
+            id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL,
+            rater TEXT, hero_contact TEXT, stars INTEGER, comment TEXT)""")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_ratings_hero ON ratings(hero_contact)")
         # Migrations for columns added after first release (ignore if present).
         for stmt in (
             "ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 0",
@@ -246,6 +253,57 @@ def suspend_posts_by_contact(contact):
     with _conn() as c:
         cur = c.execute("UPDATE posts SET status='suspended' WHERE contact=?", (contact,))
         return cur.rowcount
+
+
+# ---- hero reputation: 1-5 star ratings ----
+import re as _re
+
+
+def norm_contact(c):
+    """Key ratings by the digits of a contact so '+58 412-1' == '584121'."""
+    digits = _re.sub(r"\D", "", c or "")
+    return digits[-10:] if len(digits) >= 10 else digits
+
+
+def add_rating(rater, hero_contact, stars, comment=None):
+    """One rating per rater per hero — the newest replaces the old."""
+    key = norm_contact(hero_contact)
+    if not key:
+        return
+    stars = max(1, min(5, int(stars)))
+    with _conn() as c:
+        c.execute("DELETE FROM ratings WHERE rater=? AND hero_contact=?", (rater, key))
+        c.execute("""INSERT INTO ratings(ts,rater,hero_contact,stars,comment)
+                     VALUES(?,?,?,?,?)""", (time.time(), rater, key, stars, comment))
+
+
+def hero_stats(contact):
+    """(avg, count) for a helper's contact. avg rounded to 1 decimal."""
+    key = norm_contact(contact)
+    if not key:
+        return (0.0, 0)
+    with _conn() as c:
+        row = c.execute("""SELECT AVG(stars) a, COUNT(*) n FROM ratings
+                           WHERE hero_contact=?""", (key,)).fetchone()
+    if not row or not row["n"]:
+        return (0.0, 0)
+    return (round(row["a"], 1), row["n"])
+
+
+def is_self_contact(user, contact):
+    """True if the contact looks like the rater's own number (block self-rating)."""
+    uk, ck = norm_contact(user), norm_contact(contact)
+    return bool(uk) and bool(ck) and uk == ck
+
+
+def top_heroes(limit=3, min_reviews=1):
+    """Leaderboard: best-rated helpers (avg, count) with at least min_reviews."""
+    with _conn() as c:
+        rows = c.execute("""SELECT hero_contact, AVG(stars) a, COUNT(*) n FROM ratings
+                            GROUP BY hero_contact HAVING n >= ?
+                            ORDER BY a DESC, n DESC LIMIT ?""",
+                         (min_reviews, limit)).fetchall()
+    return [(r["hero_contact"], round(r["a"], 1), r["n"]) for r in rows]
 
 
 # ---- close-the-loop: a person was LOCATED ----
