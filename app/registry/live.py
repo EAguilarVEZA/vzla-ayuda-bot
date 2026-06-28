@@ -197,6 +197,12 @@ def render_es(name: str, verdicts: list) -> str:
         else:
             lines.append(f"*{v.source}* — ⚠️ no se pudo consultar ahora; intenta directamente: {v.url}")
         lines.append("")
+    # If you found them: let people update every registry so the name brings calm.
+    lines.append("🟢 *¿Lo/la encontraste?* Avísale a cada registro para marcarlo/a como "
+                 "LOCALIZADO/A (y agrega los detalles que tengas):")
+    for v in verdicts:
+        lines.append(f"   • {v.source}: {v.url}")
+    lines.append("")
     lines += ["ℹ️ No somos el sistema oficial — te mostramos lo que reporta cada fuente. "
               "Confirma siempre en la fuente antes de actuar.",
               "🏛️ Búsqueda oficial de familiares (Cruz Roja): https://familylinks.icrc.org",
