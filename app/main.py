@@ -139,7 +139,11 @@ def sim_page():
 
 @app.post("/sim/send")
 def sim_send(msg: SimIn):
-    return {"reply": str(handle(user=msg.user, body=msg.body))}
+    reply = handle(user=msg.user, body=msg.body)
+    # Surface attached images (e.g. a missing person's photo) so the simulator
+    # renders them inline, exactly like WhatsApp would.
+    media = list(getattr(reply, "media", []) or [])
+    return {"reply": str(reply), "media": media}
 
 
 @app.get("/metrics/daily")

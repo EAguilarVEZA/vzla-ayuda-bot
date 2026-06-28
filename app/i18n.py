@@ -35,6 +35,10 @@ STR = {
         "es": "📍 ¿Quieres lo más cercano a ti? Comparte tu ubicación (toca 📎 → Ubicación) o escribe tus coordenadas (ej: 10.60,-66.93) y te muestro los lugares cerca con la dirección y a qué distancia.",
         "en": "📍 Want the closest to you? Share your location (tap 📎 → Location) or type your coordinates (e.g. 10.60,-66.93) and I'll show nearby places with the address and how far.",
     },
+    "found_ask_name": {
+        "es": "🟢 ¡Qué buena noticia! Vamos a marcar a una persona como localizada y avisar a los registros.\nEscribe el *nombre completo* de la persona que encontraste o que está bien.",
+        "en": "🟢 Wonderful news! Let's mark someone as located and update the registries.\nType the *full name* of the person you found or who is safe.",
+    },
     "found_pick": {
         "es": "🟢 ¡Qué buena noticia! ¿A cuál de estas personas encontraste? Responde con el número:\n{list}\n(o escribe el nombre)",
         "en": "🟢 Wonderful news! Which of these people did you find? Reply with the number:\n{list}\n(or type the name)",

@@ -61,6 +61,7 @@ async function send(){
   try{
     const r=await fetch('/sim/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user:USER,body:text})});
     const j=await r.json(); t.remove(); bubble(j.reply||'(no reply)','bot');
+    (j.media||[]).forEach(url=>{const im=document.createElement('img'); im.src=url; im.className='b bot'; im.style.maxWidth='62%'; im.style.padding='3px'; im.alt='foto'; im.onerror=()=>{im.alt='(foto no disponible)';}; msgs.appendChild(im); msgs.scrollTop=msgs.scrollHeight;});
   }catch(e){ t.remove(); bubble('Error: '+e.message,'bot'); }
 }
 function reset(){

@@ -247,20 +247,13 @@ def _handle(user, body, lat=None, lon=None):
 
     lang = M.get_lang(user)
 
-    # After a search we keep a 'found:ready' context. The user can start the
-    # "I found them" flow; anything else simply drops the context and routes on.
+    # "I found / they're safe" guided flow (option 2). Search (option 1) no
+    # longer triggers this — it lives in its own dedicated option.
     if state and state.startswith("found:"):
         if low in ("menu", "menú", "cancelar", "cancel", "salir", "exit"):
             M.clear_session(user)
             return _menu(lang)
-        step = state.split(":", 1)[1]
-        if step == "ready":
-            if _is_found_trigger(low):
-                return _found_flow(user, text, lang, "found:start", scratch)
-            M.clear_session(user)
-            state, scratch = "", "{}"
-        else:
-            return _found_flow(user, text, lang, state, scratch)
+        return _found_flow(user, text, lang, state, scratch)
 
     # Was waiting for a shared location but they sent something else -> drop it
     # and route the message normally.
@@ -368,7 +361,10 @@ def _route(user, lang, intent):
         return reply + "\n\n" + i18n.t(lang, "more_options")
 
     if intent == "mark_safe":
-        return i18n.t(lang, "mark_safe")
+        # Dedicated "I found / they're safe" flow: collect details, mark located
+        # in our system, and hand off a prefilled update to each registry.
+        M.set_session(user, "found:name", "{}")
+        return i18n.t(lang, "found_ask_name")
 
     if intent == "browse":
         return _browse(user, lang)
@@ -500,13 +496,7 @@ def _search_flow(user, text, lang):
     verdicts = registry_live.live_search(name)
     es = registry_live.render_es(name, verdicts)
     photos = [p.photo for v in verdicts for p in getattr(v, "people", []) if p.photo]
-    # Keep a lightweight context so "ENCONTRÉ" can start the found-flow next.
-    ctx = {
-        "name": name,
-        "people": [p.name for v in verdicts for p in getattr(v, "people", [])][:3],
-        "sources": [{"source": v.source, "url": v.url} for v in verdicts],
-    }
-    M.set_session(user, "found:ready", json.dumps(ctx))
+    M.clear_session(user)   # search is stateless; "found" lives in option 2
 
     if lang == "es":
         body = es
@@ -533,6 +523,11 @@ def _found_flow(user, text, lang, state, scratch):
     data = _loads(scratch)
     low = text.lower()
     step = state.split(":", 1)[1]
+
+    if step == "name":
+        data["subject"] = text.strip()
+        M.set_session(user, "found:where", json.dumps(data))
+        return i18n.t(lang, "found_where").replace("{name}", data["subject"] or "")
 
     if step == "start":
         people = data.get("people") or []
