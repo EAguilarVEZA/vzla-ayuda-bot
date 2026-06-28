@@ -31,8 +31,7 @@ def _safe_lang(user):
         return M.get_lang(user) if M.user_exists(user) else "both"
     except Exception:
         return "both"
-from .registry import search as registry_search
-from .registry.render import render_results_es
+from .registry import live as registry_live
 
 _kb_en_cache = {}
 
@@ -353,9 +352,9 @@ def _search_flow(user, text, lang):
     if not name:
         return i18n.t(lang, "ask_search_name")
 
-    # Live, stateless query across all registries; nothing is persisted.
-    results = registry_search(name, age=age, location=location)
-    es = render_results_es(name, results)
+    # Live, stateless query across the public registries; nothing is persisted.
+    verdicts = registry_live.live_search(name)
+    es = registry_live.render_es(name, verdicts)
     M.clear_session(user)
 
     if lang == "es":
